@@ -1,0 +1,104 @@
+buildscript {
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath 'org.apache.maven:maven-artifact:3.6.3'
+	}
+}
+
+import org.apache.maven.artifact.versioning.ComparableVersion
+
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.VersionInfo
+
+// semver
+
+def checkSemver = tasks.register("checkSemver") {
+	group = "Check"
+	description = "Checks Semantic versioning"
+	doFirst {
+		def errors = []
+		getVersions().each {
+			if (!(it ==~ /([0-9]+)\.([0-9]+)\.([0-9]+)(?:-(.+))?/)) {
+				errors.add(it)
+			}
+		}
+		if (errors) {
+			throw new IllegalStateException("The following versions are not compliant with semver " + errors)
+		}
+		println "All the versions were semver"
+	}
+}
+
+// gradle
+
+def checkGradleVersionOrder = tasks.register("checkGradleVersionOrder") {
+	group = "Check"
+	description = "Checks Gradle ordering of versions. The expected order is the order provided to the versions property."
+	doFirst {
+		def expectedOrder = versions
+		assert expectedOrder == gradleVersionOrder
+		println "Gradle sorted the versions as expected"
+	}
+}
+
+tasks.register("printGradleVersionOrder") {
+	group = "Help"
+	description = "Prints out Gradle ordering of versions"
+	doFirst {
+		println "\nGradle Version Order\n"				
+		gradleVersionOrder.forEach { println it }
+	}
+}
+
+def getGradleVersionOrder() {
+	def versionParser = new VersionParser()
+	def comparator = new DefaultVersionComparator()
+	
+	def versionInfo = versions.collect { new VersionInfo(versionParser.transform(it)) }
+	versionInfo.sort(comparator)
+	versionInfo*.version*.source
+}
+
+// maven
+
+def checkMavenVersionOrder = tasks.register("checkMavenVersionOrder") {
+	group = "Check"
+	description = "Checks Maven ordering of versions. The expected order is the order provided to the versions property."
+	doFirst {
+		def expectedOrder = versions
+		assert expectedOrder == mavenVersionOrder
+		println "Maven sorted the versions as expected"
+	}
+}
+
+tasks.register("printMavenVersionOrder") {
+	group = "Help"
+	description = "Prints out Maven ordering of versions"
+	doFirst {
+		println "\nMaven Versions\n"
+		mavenVersionOrder.forEach { println it }
+	}
+}
+
+def getMavenVersionOrder() {
+	def comparableVersions = versions.collect { new ComparableVersion(it) }.sort()
+	comparableVersions*.value
+}
+
+// general
+
+def check = tasks.register("check") {
+	group = "Check"
+	description = "Performs all checks"
+	dependsOn checkSemver, checkGradleVersionOrder, checkMavenVersionOrder
+}
+
+def getVersions() {
+	if (!project.hasProperty("versions")) {
+		throw new IllegalStateException("Required commandline argument -Pversions=<version>[,<version>,...] is missing")
+	}
+	project.versions.split(",")
+}
