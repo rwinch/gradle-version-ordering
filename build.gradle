@@ -4,10 +4,13 @@ buildscript {
 	}
 	dependencies {
 		classpath 'org.apache.maven:maven-artifact:3.6.3'
+		classpath 'com.vdurmont:semver4j:3.1.0'
 	}
 }
 
 import org.apache.maven.artifact.versioning.ComparableVersion
+
+import com.vdurmont.semver4j.Semver
 
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
@@ -87,6 +90,33 @@ def getMavenVersionOrder() {
 	def comparableVersions = versions.collect { new ComparableVersion(it) }.sort()
 	comparableVersions*.value
 }
+
+// semver
+
+def checkSemverOrder = tasks.register("checkSemverOrder") {
+	group = "Check"
+	description = "Checks Semver ordering of versions. The expected order is the order provided to the versions property."
+	doFirst {
+		def expectedOrder = versions
+		assert expectedOrder == mavenVersionOrder
+		println "Semver sorted the versions as expected"
+	}
+}
+
+tasks.register("printSemverOrder") {
+	group = "Help"
+	description = "Prints out Semver ordering of versions"
+	doFirst {
+		println "\nSemver\n"
+		semverOrder.forEach { println it }
+	}
+}
+
+def getSemverOrder() {
+	def comparableVersions = versions.collect { new Semver(it) }.sort()
+	comparableVersions*.value
+}
+
 
 // general
 
