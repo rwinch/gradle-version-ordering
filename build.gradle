@@ -98,7 +98,7 @@ def checkSemverOrder = tasks.register("checkSemverOrder") {
 	description = "Checks Semver ordering of versions. The expected order is the order provided to the versions property."
 	doFirst {
 		def expectedOrder = versions
-		assert expectedOrder == mavenVersionOrder
+		assert expectedOrder == semverOrder
 		println "Semver sorted the versions as expected"
 	}
 }
